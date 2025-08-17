@@ -1,35 +1,53 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import type { User } from './types/User'
+import * as store from './services/userStore'
+import UserForm from './components/UserForm'
+import UserTable from './components/UserTable'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [users, setUsers] = useState<User[]>([])
+  const [editing, setEditing] = useState<User | null>(null)
+
+  useEffect(() => {
+    setUsers(store.getUsers())
+  }, [])
+
+  function handleCreate(data: Omit<User, 'id'>) {
+    const created = store.addUser(data)
+    setUsers(prev => [...prev, created])
+  }
+
+  function handleUpdate(u: User) {
+    store.updateUser(u)
+    setUsers(prev => prev.map(x => (x.id === u.id ? u : x)))
+    setEditing(null)
+  }
+
+  function handleDelete(id: string) {
+    // (opcional) confirmação simples
+    if (!confirm('Tem certeza que deseja excluir?')) return
+    store.deleteUser(id)
+    setUsers(prev => prev.filter(u => u.id !== id))
+    if (editing?.id === id) setEditing(null)
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="container">
+      <h1>CRUD Users (React + LocalStorage)</h1>
+
+      <UserForm
+        mode={editing ? 'edit' : 'create'}
+        initial={editing ?? undefined}
+        onCreate={handleCreate}
+        onUpdate={handleUpdate}
+        onCancel={() => setEditing(null)}
+      />
+
+      <UserTable
+        users={users}
+        onEdit={setEditing}
+        onDelete={handleDelete}
+      />
+    </div>
   )
 }
-
-export default App
